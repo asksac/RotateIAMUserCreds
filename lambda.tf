@@ -1,7 +1,7 @@
 #
 # Upload and create RotateIAMUserCreds Lambda function
 #
-resource "null_resource" "riuc_build" {
+resource "null_resource" "mylambda_build" {
   triggers = {
     handler       = filesha1("src/lambdas/RotateIAMUserCreds/main.py")
     requirements  = filesha1("src/lambdas/RotateIAMUserCreds/requirements.txt")
@@ -13,15 +13,15 @@ resource "null_resource" "riuc_build" {
   }
 }
 
-data "archive_file" "riuc_archive" {
+data "archive_file" "mylambda_archive" {
   source_dir  = "${path.module}/dist/lambdas/RotateIAMUserCreds/"
   output_path = "${path.module}/dist/RotateIAMUserCreds.zip"
   type        = "zip"
 
-  depends_on = [ null_resource.riuc_build ]
+  depends_on = [ null_resource.mylambda_build ]
 }
 
-resource "aws_lambda_function" "riuc_lambda" {
+resource "aws_lambda_function" "mylambda_func" {
   function_name    = "RotateIAMUserCreds"
 
   handler          = "main.lambda_handler"
@@ -29,13 +29,12 @@ resource "aws_lambda_function" "riuc_lambda" {
   runtime          = "python3.7"
   timeout          = 60
 
-  filename         = data.archive_file.riuc_archive.output_path
-  source_code_hash = data.archive_file.riuc_archive.output_base64sha256
+  filename         = data.archive_file.mylambda_archive.output_path
+  source_code_hash = data.archive_file.mylambda_archive.output_base64sha256
 
   environment {
     variables = {
-      IAM_USER_NAME = "x"
-      IAM_ACCESS_KEY_MIN_AGE = "0"
+      IAM_USER_NAME = var.iam_user_name
     }
   }
 
@@ -46,8 +45,8 @@ resource "aws_lambda_function" "riuc_lambda" {
 # Create Lambda execution IAM role, giving permissions to access other AWS services
 
 resource "aws_iam_role" "lambda_exec_role" {
-  name = "riuc_lambda_exec_role"
-  assume_role_policy = <<EOF
+  name                = "${var.app_shortcode}_Lambda_Exec_Role"
+  assume_role_policy  = <<EOF
 {
   "Version": "2012-10-17",
   "Statement": [
@@ -67,9 +66,9 @@ EOF
 }
 
 resource "aws_iam_policy" "lambda_policy" {
-  name        = "riuc_lambda_policy"
+  name        = "${var.app_shortcode}_Lambda_Policy"
   path        = "/"
-  description = "IAM policy with basic permissions for Lambda"
+  description = "IAM policy with minimum permissions for ${var.app_name} Lambda function"
 
   policy = <<EOF
 {
@@ -82,13 +81,6 @@ resource "aws_iam_policy" "lambda_policy" {
         "logs:PutLogEvents"
       ],
       "Resource": "arn:aws:logs:*:*:*",
-      "Effect": "Allow"
-    }, 
-    {
-      "Action": [
-        "lambda:InvokeFunction"
-      ],
-      "Resource": "arn:aws:lambda:*:*:*",
       "Effect": "Allow"
     }, 
     {
