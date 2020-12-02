@@ -8,12 +8,10 @@ associated with an IAM User. It utilizes VPC Endpoint powered by AWS PrivateLink
 secure access to Lambda function without need for Internet access. Moreover, if accessed
 from within a VPC, data traffic never leaves AWS network. 
 
-&nbsp;
 ## Diagram
 
 ![AWS Diagram](docs/aws_diagram.png)
 
-&nbsp;
 ## Installation
 
 Follow these steps to get up and running with a fully working environment: 
@@ -121,7 +119,6 @@ The output captured in `response.json` should resemble something like this:
 {"statusCode": 200, "body": {"NewKeys": "[]", "ActiveKeys": [{"UserName": "myuser", "AccessKeyId": "A9Z8B7Y6C5X4D3W2E1", "KeyAgeInDays": 18, "Status": "Active"}]}}
 ```
 
-&nbsp;
 ## License
 
 [![License](http://img.shields.io/:license-mit-blue.svg?style=flat-square)](http://badges.mit-license.org)
