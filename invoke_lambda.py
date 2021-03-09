@@ -143,9 +143,10 @@ def main():
   )
 
   cliparser = argparse.ArgumentParser(description = 'invoke a lambda function synchronously', epilog = 'note: this program requires python 2.7 or above')
-  cliparser.add_argument('function_name', help='lambda function\'s ARN or name (eg. HelloWorld)')
   cliparser.add_argument('--endpoint', required=False, default='lambda.us-east-1.amazonaws.com', help='lambda endpoint DNS name (eg. lambda.us-east-1.amazonaws.com)')
   cliparser.add_argument('--region', required=False, default='us-east-1', help='AWS region name (eg. us-east-1)')
+  cliparser.add_argument('function_name', help='lambda function\'s ARN or name (eg. HelloWorld)')
+  cliparser.add_argument('payload', help='JSON string as input to lambda function')
 
   args = cliparser.parse_args()
   lambda_service['region'] = args.region
@@ -174,7 +175,7 @@ def main():
   # Invoke API call 
   print('----- Lambda:Invoke -----')
   post_uri = '/2015-03-31/functions/' + args.function_name + '/invocations'
-  data = ''
+  data = args.payload
   (u, h) = build_request(service=lambda_service, method='POST', uri_path=post_uri, body=data, 
                         headers={'x-amz-invocation-type': 'RequestResponse', 'x-amz-log-type': 'Tail'})
   res = submit_request('POST', u, h, data)
