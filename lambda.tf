@@ -1,6 +1,8 @@
 #
 # Upload and create RotateIAMUserCreds Lambda function
 #
+
+/*
 resource "null_resource" "mylambda_build" {
   triggers = {
     handler       = filesha1("src/lambdas/RotateIAMUserCreds/main.py")
@@ -12,13 +14,15 @@ resource "null_resource" "mylambda_build" {
     command       = "${path.module}/src/lambdas/RotateIAMUserCreds/build.sh"
   }
 }
+*/
 
 data "archive_file" "mylambda_archive" {
-  source_dir  = "${path.module}/dist/lambdas/RotateIAMUserCreds/"
+  #source_dir  = "${path.module}/dist/lambdas/RotateIAMUserCreds/"
+  source_file  = "${path.module}/src/lambdas/RotateIAMUserCreds/main.py"
   output_path = "${path.module}/dist/RotateIAMUserCreds.zip"
   type        = "zip"
 
-  depends_on = [ null_resource.mylambda_build ]
+  #depends_on = [ null_resource.mylambda_build ]
 }
 
 resource "aws_lambda_function" "mylambda_func" {
