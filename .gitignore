@@ -30,7 +30,6 @@ override.tf.json
 
 # exclude key files from version control
 *.pem
-!config/ssl/*.pem
 
 # ignore packer variables file
 *.pkrvars.json
@@ -38,6 +37,7 @@ override.tf.json
 
 # ignore dist folder
 dist/*
+!dist
 
 # ignore response.json (generated while testing Lambda invocation)
 response.json
