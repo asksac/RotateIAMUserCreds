@@ -160,7 +160,7 @@ def main():
   lambda_service['access_key'] = access_key
   lambda_service['secret_key'] = secret_key
 
-  logging.basicConfig(format='%(asctime)s - %(levelname)s - %(message)s', level=logging.INFO)
+  logging.basicConfig(format='%(asctime)s - %(levelname)s - %(message)s', level=logging.ERROR)
 
   # sets logging level for urllib
   if lambda_service.get('scheme') == 'https': 
@@ -180,6 +180,8 @@ def main():
                         headers={'x-amz-invocation-type': 'RequestResponse', 'x-amz-log-type': 'Tail'})
   res = submit_request('POST', u, h, data)
   print('----- Lambda:Invoke -----\n\n')
+
+  print(res[1])
 
 # -----
 
