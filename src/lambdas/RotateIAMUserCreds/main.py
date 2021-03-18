@@ -60,17 +60,21 @@ def lambda_handler(event, context):
   # to limit exposure via this Lambda, we want to restrict IAM user via an environment variable
   user = os.environ.get('IAM_USER_NAME')
   if (not user): 
+    err_msg = 'A valid username not specified via IAM_USER_NAME environment variable'
+    logger.error(err_msg)
     return {
       'statusCode': 500,
-      'body': 'A valid username not specified via IAM_USER_NAME environment variable'
+      'body': err_msg
     }
 
   #days_filter = os.environ.get('IAM_ACCESS_KEY_MIN_AGE')
   days_filter = event.get('AccessKeyMinAgeInDays')
   if (not days_filter or not days_filter.isnumeric()): 
+    err_msg = 'A valid value of AccessKeyMinAgeInDays not specified in function payload, e.g. {"AccessKeyMinAgeInDays": "30"}'
+    logger.error(err_msg)
     return {
       'statusCode': 500,
-      'body': 'A valid value of AccessKeyMinAgeInDays not specified in function payload, e.g. {"AccessKeyMinAgeInDays": "30"}'
+      'body': err_msg
     }
 
   logger.info('Requested IAM_USER_NAME and AccessKeyMinAgeInDays: {}, {}'.format(user, days_filter))
@@ -82,13 +86,14 @@ def lambda_handler(event, context):
       disable_key(user = access_key['UserName'], access_key = access_key['AccessKeyId'])
       delete_key(user = access_key['UserName'], access_key = access_key['AccessKeyId'])
       nk = create_key(user = access_key['UserName'])
+      logger.info('New access key id {} generated for user {}'.format(nk[0], access_key['UserName']))
       new_keys.append(nk)
   
   return {
     'statusCode': 200,
     'body': {
-      'NewKeys': json.dumps(new_keys), 
-      'ActiveKeys': list_access_key(user = user, days_filter = 0, status_filter = 'Active')
+      'newKeys': new_keys, 
+      'activeKeys': list_access_key(user = user, days_filter = 0, status_filter = 'Active')
     }
   }
 
