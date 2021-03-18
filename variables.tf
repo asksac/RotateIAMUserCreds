@@ -38,6 +38,12 @@ variable "subnet_ids" {
   description             = "Specify a list of Subnet IDs where Lambda VPC endpoint will be deployed"
 }
 
+variable "lambda_name" {
+  type                    = string 
+  default                 = "RotateIAMUserCreds"
+  description             = "Specify a name to be used for Lambda function"
+}
+
 variable "principal_arn" {
   type                    = string 
   description             = "Specify ARN of Principal to grant Lambda invoke access at VPC endpoint"
