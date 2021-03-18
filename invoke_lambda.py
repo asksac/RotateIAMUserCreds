@@ -151,11 +151,20 @@ def prettyXml(txt):
   return xml_pretty_str
 
 def tpConfig(storage_server, stype, access_key_id, secret_key): 
-  command = ['tpconfig', '-update', '-storage_server', storage_server, '-stype', stype, '-sts_user_id', access_key_id]
+  command = ['tpconfig', '-update', '-storage_server', storage_server, '-stype', stype, '-sts_user_id', access_key_id, '-password', secret_key]
   logging.info('Calling tpconfig with following parameters: ' + str(command))
-  p = subprocess.Popen(command, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-  output = p.communicate(input=secret_key.encode())[0]
+  output = subprocess.call(command)
   logging.info('Output from tpconfig: ' + output)
+
+  #p = subprocess.Popen(command, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+  #print(p.stdout.readline())
+  #p.stdin.write(secret_key.encode()+b'\n')
+  #print(p.stdout.readline())
+  #p.stdin.write(secret_key.encode()+b'\n')
+  #print(p.stdout.readline())
+  #os.write(p.stdin.fileno(), secret_key.encode()+b'\n')
+  #os.write(p.stdin.fileno(), secret_key.encode()+b'\n')
+  #output = p.communicate(input=secret_key.encode())[0]
 
 # -----
 
@@ -268,13 +277,13 @@ def main():
     logging.debug('Lambda response: ' + res_body)
     sys.exit(-3)
 
-  new_access_key = new_secret_key = None
+  new_access_key_id = new_secret_key = None
   try: 
     if type(newKeys) is list and len(newKeys) > 0: 
       new_access_key_id = newKeys[0][0]
       new_secret_key = newKeys[0][1]
       if args.save_profile: 
-        saveAccessKeys(args.save_profile, new_access_key, new_secret_key)
+        saveAccessKeys(args.save_profile, new_access_key_id, new_secret_key)
         logging.info('New access key id {} and secret key saved to file {} under {} profile.'.format(new_access_key_id, CREDENTIALS_FILE, args.save_profile))
       else:
         logging.warning('New access key id and secret key not saved to credentials file as --save-profile option was not provided')
