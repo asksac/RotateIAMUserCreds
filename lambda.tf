@@ -26,7 +26,7 @@ data "archive_file" "mylambda_archive" {
 }
 
 resource "aws_lambda_function" "mylambda_func" {
-  function_name    = "RotateIAMUserCreds"
+  function_name    = var.lambda_name 
 
   handler          = "main.lambda_handler"
   role             = aws_iam_role.lambda_exec_role.arn
@@ -72,7 +72,7 @@ EOF
 resource "aws_iam_policy" "lambda_policy" {
   name        = "${var.app_shortcode}_Lambda_Policy"
   path        = "/"
-  description = "IAM policy with minimum permissions for ${var.app_name} Lambda function"
+  description = "IAM policy with minimum permissions for ${var.lambda_name} Lambda function"
 
   policy = <<EOF
 {
@@ -84,7 +84,7 @@ resource "aws_iam_policy" "lambda_policy" {
         "logs:CreateLogStream",
         "logs:PutLogEvents"
       ],
-      "Resource": "arn:aws:logs:*:*:*",
+      "Resource": "arn:aws:logs:*:*:log-group:/aws/lambda/${var.lambda_name}",
       "Effect": "Allow"
     }, 
     {
@@ -97,7 +97,7 @@ resource "aws_iam_policy" "lambda_policy" {
         "iam:ListAccessKeys",
         "iam:UpdateAccessKey"
       ],
-      "Resource": "*",
+      "Resource": "arn:aws:iam::*:user/${var.iam_user_name}",
       "Effect": "Allow"
     }
   ]
