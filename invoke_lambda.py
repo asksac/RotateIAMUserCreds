@@ -151,20 +151,25 @@ def prettyXml(txt):
   return xml_pretty_str
 
 def tpConfig(storage_server, stype, access_key_id, secret_key): 
-  command = ['tpconfig', '-update', '-storage_server', storage_server, '-stype', stype, '-sts_user_id', access_key_id, '-password', secret_key]
-  logging.info('Calling tpconfig with following parameters: ' + str(command))
-  output = subprocess.call(command)
-  logging.info('Output from tpconfig: ' + output)
+  command = ['tpconfig', '-update', '-storage_server', storage_server, '-stype', stype, '-sts_user_id', access_key_id] # '-password', secret_key
+  logging.info('Calling tpconfig with following command-line: ' + ' '.join(command))
+  proc = subprocess.Popen(command, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+  outdata, errdata = proc.communicate(os.linesep.join([secret_key, secret_key]).encode())
+  rc = proc.returncode
+  logging.info('tpconfig return code: %s' % rc)
+  logging.info('tpconfig output: %s (stderr: %s)' % (outdata, errdata))
 
-  #p = subprocess.Popen(command, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-  #print(p.stdout.readline())
-  #p.stdin.write(secret_key.encode()+b'\n')
-  #print(p.stdout.readline())
-  #p.stdin.write(secret_key.encode()+b'\n')
-  #print(p.stdout.readline())
-  #os.write(p.stdin.fileno(), secret_key.encode()+b'\n')
-  #os.write(p.stdin.fileno(), secret_key.encode()+b'\n')
-  #output = p.communicate(input=secret_key.encode())[0]
+  '''
+  proc = subprocess.Popen(command, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, env=env, shell=True)
+  result = proc.communicate()[0]
+  ret_code = proc.wait()
+  print ret_code, result
+
+  env = dict(os.environ)
+  output = subprocess.call(command)
+  logging.info('Output from tpconfig: ' + str(output))
+  p = subprocess.Popen(command, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+  '''
 
 # -----
 
