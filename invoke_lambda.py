@@ -6,6 +6,7 @@ import argparse
 import xml.dom.minidom
 import subprocess
 import copy
+import time
 
 sys.path.insert(0, './lib')
 import pexpect 
@@ -160,7 +161,15 @@ def tpConfig(storage_server, stype, access_key_id, secret_key):
   child.sendline(secret_key)
   child.expect(['(.*)password to confirm it:', pexpect.EOF, pexpect.TIMEOUT])
   child.sendline(secret_key)
-  child.close()
+  timeout = 10 # 10 seconds
+  for t in range(0, timeout): 
+    if child.isalive(): 
+      time.sleep(1)
+  if child.isalive(): 
+    # tpconfig child process has not exited after timeout
+    child.close() 
+    logging.error('Child process (tpconfig) did not finish after %ss timeout' % timeout)
+
   logging.info('Output from tpconfig: %s' % child.after)
   logging.info('Done executing tpconfig with exit code %s and signal status %s' % (child.exitstatus, child.signalstatus))
 
@@ -285,14 +294,13 @@ def main():
         logging.info('New access key id {} and secret key saved to file {} under {} profile.'.format(new_access_key_id, CREDENTIALS_FILE, args.save_profile))
       else:
         logging.warning('New access key id and secret key not saved to credentials file as --save-profile option was not provided')
+      if args.storage_server and args.stype: 
+        tpConfig(args.storage_server, args.stype, new_access_key_id, new_secret_key)
     else: 
       logging.error('Lambda response did not return any valid new keys')
   except: 
     logging.exception('New access key could not be processed')
     sys.exit(-4)
-
-  if args.storage_server and args.stype: 
-    tpConfig(args.storage_server, args.stype, new_access_key_id, new_secret_key)
 
 # -----
 
