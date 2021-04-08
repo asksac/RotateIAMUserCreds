@@ -1,0 +1,20 @@
+#!/bin/sh
+
+# this script simulates tpconfig command
+
+echo "Welcome to my tpconfig simulator program"
+
+printf "Enter password for User Id $1:"
+read pass1
+
+printf "Enter password to confirm it:"
+read pass2
+
+if [ $pass1 = $pass2 ]; 
+then 
+  echo "Passwords match :)"
+  exit 0
+else 
+  echo "Passwords dont match :("
+  exit 1
+fi
