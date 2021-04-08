@@ -28,16 +28,16 @@ override.tf.json
 # Include tfplan files to ignore the plan output of command: terraform plan -out=tfplan
 # example: *tfplan*
 
-# exclude key files from version control
+# Ignore terraform lock files
+*.lock.hcl
+
+# Exclude key files from version control
 *.pem
 
-# ignore packer variables file
+# Ignore packer variables file
 *.pkrvars.json
 *.pkrvars.hcl
 
-# ignore dist folder
+# Ignore dist folder
 dist/*
 !dist
-
-# ignore response.json (generated while testing Lambda invocation)
-response.json
