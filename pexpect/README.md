@@ -52,16 +52,19 @@ optional arguments:
 note: this program requires python 2.7 or above
 ```
 
-A sample command line to run `invoke_lambda.py` is shown below: 
+A sample command line to run `invoke_lambda.py` is shown below (make sure to change parameter values
+before running the command): 
 
 ```shell
 python invoke_lambda.py --debug \
   --endpoint vpce-xxxxxxxxxxxxxxxx-xxxxxxxx.lambda.us-east-1.vpce.amazonaws.com \
   --region us-east-1 \
   --auth-profile default \
-  --save-profile RotateIAMUserCreds \
+  --save-profile default \
   --storage-server my-server \
   --stype PureDisk_amazon_rawd \
   --function-name RotateIAMUserCreds \
   '{"AccessKeyMinAgeInDays":"30"}' 
 ```
+
+*Note: `--debug` flag must never is used in Production environment, it will output secret key value in logs.*
