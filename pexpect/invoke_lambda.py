@@ -1,14 +1,16 @@
+#!/usr/bin/env python
+
 import sys, os, datetime
 import base64, hashlib, hmac
 import logging
 import json
 import argparse
 import xml.dom.minidom
-import subprocess
 import copy
 import time
 
-sys.path.insert(0, './lib')
+# import pexpect from local subdirectory 
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "lib"))
 import pexpect 
 
 if (sys.version_info > (3, 0)):
@@ -155,23 +157,59 @@ def prettyXml(txt):
   return xml_pretty_str
 
 def tpConfig(storage_server, stype, access_key_id, secret_key): 
+  tpcmd = 'tpconfig' # change to use actual tpconfig command path
   tpcargs = ['-update', '-storage_server', storage_server, '-stype', stype, '-sts_user_id', access_key_id] 
-  child = pexpect.spawn('tpconfig', tpcargs)
-  child.expect(['(.*)password for User Id(.*):', pexpect.EOF, pexpect.TIMEOUT])
-  child.sendline(secret_key)
-  child.expect(['(.*)password to confirm it:', pexpect.EOF, pexpect.TIMEOUT])
-  child.sendline(secret_key)
+
+  logging.info('Invoking command %s with \'%s\' storage server and \'%s\' stype parameter values' % (tpcmd, storage_server, stype))
+  child = pexpect.spawn(tpcmd, tpcargs, echo=False, encoding='iso-8859-1')
+
+  if logging.getLogger().getEffectiveLevel() == logging.DEBUG: 
+    child.logfile = sys.stdout
+
+  shhh = 0.1 # wait time (100ms) before sending input
+  err_msg = '%s command did not output expected pattern or it timed out' % tpcmd
+
+  index = child.expect([u'(.*)password for User Id(.*):', pexpect.EOF, pexpect.TIMEOUT])
+  if index == 0: 
+    time.sleep(shhh) 
+    b = child.sendline(secret_key)
+    logging.debug('First pattern was found, sent %s bytes of input data' % b)
+  else: 
+    logging.error(err_msg)
+    raise RuntimeError(err_msg)
+
+  index = child.expect([u'(.*)password to confirm it:', pexpect.EOF, pexpect.TIMEOUT])
+  if index == 0: 
+    time.sleep(shhh) 
+    b = child.sendline(secret_key)
+    logging.debug('Second pattern was found, sent %s bytes of input data' % b)
+  else: 
+    logging.error(err_msg)
+    raise RuntimeError(err_msg)
+
   timeout = 10 # 10 seconds
-  for t in range(0, timeout): 
-    if child.isalive(): 
-      time.sleep(1)
+
+  # read any final output from command, then wait for command to finish upto timeout
+  try: 
+    output = child.read_nonblocking(size=1024, timeout=1)
+    logging.info('Final output from %s command: %s' % (tpcmd, output.encode()))
+
+    for t in range(0, timeout): 
+      if child.isalive(): 
+        index = child.expect([pexpect.TIMEOUT, pexpect.EOF], timeout=1)
+        if index == 1 and child.before: 
+          logging.debug('Unexpected output while waiting for %s command to finish (in iteration %s): %s' % (tpcmd, t, child.before.encode()))
+          break
+  except: 
+    logging.exception('Error received while waiting for command to finish')
+
   if child.isalive(): 
     # tpconfig child process has not exited after timeout
-    child.close() 
-    logging.error('Child process (tpconfig) did not finish after %ss timeout' % timeout)
+    child.close(force=True) 
+    logging.warning('Command was force closed after %ss timeout' % timeout)
 
-  logging.info('Output from tpconfig: %s' % child.after)
-  logging.info('Done executing tpconfig with exit code %s and signal status %s' % (child.exitstatus, child.signalstatus))
+  #logging.info('Output from tpconfig: %s' % child.after)
+  logging.info('Finished executing command with exit code %s and signal status %s' % (child.exitstatus, child.signalstatus))
 
 # -----
 
@@ -230,20 +268,23 @@ def main():
   # extract cli option values and set program behavior
   args = cliparser.parse_args()
 
-  # sets logging level
-  level = logging.INFO # default
-  if args.debug: level = logging.DEBUG
-  logging.basicConfig(format='%(asctime)s - %(levelname)s - %(message)s', level=level)
+  # configure logger
+  logging.basicConfig(format='%(asctime)s - %(levelname)s - %(message)s', level = logging.INFO)
+
+  if args.debug: 
+    logging.getLogger().setLevel(logging.DEBUG)
+    logging.warning('DEBUG log level is enabled. Access key secret will be visible in log output!')
 
   lambda_service['region'] = args.region
   lambda_service['endpoint'] = args.endpoint
+  logging.debug('Using AWS region \'%s\' and Lambda endpoint \'%s\'' % (args.endpoint, args.region))
  
   (access_key, secret_key) = getAccessKeys(args.auth_profile)
   if access_key is None or secret_key is None:
     logging.error('AWS access credentials not found in os.environment or ~/.aws/credentials file')
-    sys.exit(-1)
+    sys.exit(253)
   else: 
-    logging.info('Using access key id {} for lambda service authentication'.format(access_key))
+    logging.info('Using access key id {} for Lambda service authentication'.format(access_key))
 
   lambda_service['access_key'] = access_key
   lambda_service['secret_key'] = secret_key
@@ -251,24 +292,30 @@ def main():
   # sets logging level for urllib
   if lambda_service.get('scheme') == 'https': 
     https_logger = urllibx.HTTPSHandler(debuglevel = 1 if args.debug else 0)
-    opener = urllibx.build_opener(https_logger) # put your other handlers here too!
+    opener = urllibx.build_opener(https_logger) 
     urllibx.install_opener(opener)
   else: 
     http_logger = urllibx.HTTPHandler(debuglevel = 1 if args.debug else 0)
-    opener = urllibx.build_opener(http_logger) # put your other handlers here too!
+    opener = urllibx.build_opener(http_logger) 
     urllibx.install_opener(opener)
 
   # Invoke Lambda function 
-  logging.info('Invoking lambda function {} using access key id {}'.format(args.function_name, access_key))
+  logging.info('Invoking Lambda function %s with %s bytes of payload data' % (args.function_name, len(args.payload)))
   post_uri = '/2015-03-31/functions/' + args.function_name + '/invocations'
   req_body = args.payload
-  (req_url, req_headers) = build_request(service=lambda_service, method='POST', uri_path=post_uri, body=req_body, 
-                        headers={'x-amz-invocation-type': 'RequestResponse', 'x-amz-log-type': 'Tail'})
+  (req_url, req_headers) = build_request(
+    service = lambda_service, 
+    method = 'POST', 
+    uri_path = post_uri, 
+    body = req_body, 
+    headers = {'x-amz-invocation-type': 'RequestResponse', 'x-amz-log-type': 'Tail'}
+  )
   (res_code, res_body) = submit_request('POST', req_url, req_headers, req_body)
+  logging.info('Lambda function returned %s response code and %s bytes of response data' % (res_code, len(res_body)))
 
   if (int(res_code) != 200): 
-    logging.error('Received response code {} from lambda. Exiting as it is a non 200 code.'.format(res_code))
-    sys.exit(-2)
+    logging.error('Exiting due to non 200 response code')
+    sys.exit(254)
 
   try: 
     res_body_json = json.loads(res_body)
@@ -280,11 +327,10 @@ def main():
     logging.info('Lambda returned newKeys: {}'.format(newKeys_masked))
     logging.info('Lambda returned activeKeys: {}'.format(activeKeys))
   except: 
-    logging.exception('Lambda response is an invalid JSON string')
-    logging.debug('Lambda response: ' + res_body)
-    sys.exit(-3)
+    logging.exception('Lambda returned an invalid JSON response')
+    logging.debug('Lambda raw response: ' + res_body)
+    sys.exit(100)
 
-  new_access_key_id = new_secret_key = None
   try: 
     if type(newKeys) is list and len(newKeys) > 0: 
       new_access_key_id = newKeys[0][0]
@@ -294,13 +340,18 @@ def main():
         logging.info('New access key id {} and secret key saved to file {} under {} profile.'.format(new_access_key_id, CREDENTIALS_FILE, args.save_profile))
       else:
         logging.warning('New access key id and secret key not saved to credentials file as --save-profile option was not provided')
+
+      # invoke tpconfig if required arguments are present
       if args.storage_server and args.stype: 
         tpConfig(args.storage_server, args.stype, new_access_key_id, new_secret_key)
+      else: 
+        logging.info('tpconfig not executed as both --storage-server and --stype arguments were not specified')
     else: 
       logging.error('Lambda response did not return any valid new keys')
+      sys.exit(101)
   except: 
     logging.exception('New access key could not be processed')
-    sys.exit(-4)
+    sys.exit(255)
 
 # -----
 
