@@ -1,0 +1,5 @@
+# ignore lib folder
+lib
+
+# ignore pexpect.zip file
+pexpect.zip
