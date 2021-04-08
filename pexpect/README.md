@@ -19,3 +19,49 @@ pip install pexpect -t ./lib
 ```
 
 For local testing purposes, `tpconfig` is a shell script provided to simulate the actual tpconfig command. 
+
+## Usage
+
+Running `python invoke_lambda.py -h` produces the following usage instructions: 
+
+```
+usage: invoke_lambda.py [-h] [--debug] [--endpoint ENDPOINT] [--region REGION] [--auth-profile AUTH_PROFILE] [--save-profile SAVE_PROFILE]
+                        [--storage-server STORAGE_SERVER] [--stype STYPE] --function-name FUNCTION_NAME
+                        payload
+
+invoke a lambda function synchronously
+
+positional arguments:
+  payload               JSON string as input to lambda function
+
+optional arguments:
+  -h, --help            show this help message and exit
+  --debug               enables debug logging mode
+  --endpoint ENDPOINT   lambda endpoint DNS name (eg. lambda.us-east-1.amazonaws.com)
+  --region REGION       AWS region name (eg. us-east-1)
+  --auth-profile AUTH_PROFILE
+                        aws credentials file profile name for lambda service authentication
+  --save-profile SAVE_PROFILE
+                        aws credentials file profile name for saving new access key id and secret key
+  --storage-server STORAGE_SERVER
+                        netbackup storage server name
+  --stype STYPE         netbackup stype parameter value
+  --function-name FUNCTION_NAME
+                        lambda function's name (eg. HelloWorld)
+
+note: this program requires python 2.7 or above
+```
+
+A sample command line to run `invoke_lambda.py` is shown below: 
+
+```shell
+python invoke_lambda.py --debug \
+  --endpoint vpce-xxxxxxxxxxxxxxxx-xxxxxxxx.lambda.us-east-1.vpce.amazonaws.com \
+  --region us-east-1 \
+  --auth-profile default \
+  --save-profile RotateIAMUserCreds \
+  --storage-server my-server \
+  --stype PureDisk_amazon_rawd \
+  --function-name RotateIAMUserCreds \
+  '{"AccessKeyMinAgeInDays":"30"}' 
+```
